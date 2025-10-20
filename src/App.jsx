@@ -7,8 +7,8 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // 👇 REPLACE THIS WITH YOUR ACTUAL AZURE FUNCTION URL
-  const AZURE_FUNCTION_URL = 'https://weather-app-xmrenigmax-a7d3eqfed0cpbeez.uksouth-01.azurewebsites.net/api/GetWeather'
+  // ✅ Correct way to access Vite environment variables
+  const AZURE_FUNCTION_URL = import.meta.env.VITE_AZURE_FUNCTION_URL
 
   const getWeather = async () => {
     if (!city.trim()) {
@@ -16,12 +16,20 @@ function App() {
       return
     }
 
+    // ✅ Add debug logging to check the URL
+    console.log('Function URL:', AZURE_FUNCTION_URL)
+    console.log('Searching for city:', city)
+
     setLoading(true)
     setError('')
     setWeather(null)
 
     try {
-      const response = await fetch(`${AZURE_FUNCTION_URL}&city=${encodeURIComponent(city)}`)
+      // ✅ Fix the URL concatenation
+      const url = `${AZURE_FUNCTION_URL}&city=${encodeURIComponent(city)}`
+      console.log('Full URL:', url)
+      
+      const response = await fetch(url)
       const data = await response.json()
       
       if (response.ok) {
@@ -30,11 +38,13 @@ function App() {
         setError(data || 'City not found')
       }
     } catch (err) {
-      setError('Failed to fetch weather data')
+      setError('Failed to fetch weather data: ' + err.message)
+      console.error('Fetch error:', err)
     } finally {
       setLoading(false)
     }
   }
+
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
