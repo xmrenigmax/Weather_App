@@ -11,39 +11,47 @@ function App() {
   const AZURE_FUNCTION_URL = import.meta.env.VITE_AZURE_FUNCTION_URL
 
   const getWeather = async () => {
-    if (!city.trim()) {
-      setError('Please enter a city name')
-      return
-    }
-
-    // ✅ Add debug logging to check the URL
-    console.log('Function URL:', AZURE_FUNCTION_URL)
-    console.log('Searching for city:', city)
-
-    setLoading(true)
-    setError('')
-    setWeather(null)
-
-    try {
-      // ✅ Fix the URL concatenation
-      const url = `${AZURE_FUNCTION_URL}&city=${encodeURIComponent(city)}`
-      console.log('Full URL:', url)
-      
-      const response = await fetch(url)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setWeather(data)
-      } else {
-        setError(data || 'City not found')
-      }
-    } catch (err) {
-      setError('Failed to fetch weather data: ' + err.message)
-      console.error('Fetch error:', err)
-    } finally {
-      setLoading(false)
-    }
+  if (!city.trim()) {
+    setError('Please enter a city name')
+    return
   }
+
+  console.log('Function URL:', AZURE_FUNCTION_URL)
+  console.log('Searching for city:', city)
+
+  setLoading(true)
+  setError('')
+  setWeather(null)
+
+  try {
+    // ✅ FIX: Make sure we're building the URL correctly
+    // If AZURE_FUNCTION_URL already has ?code=, then use &city=
+    // If not, use ?city=
+    let url;
+    if (AZURE_FUNCTION_URL.includes('?')) {
+      url = `${AZURE_FUNCTION_URL}&city=${encodeURIComponent(city)}`
+    } else {
+      url = `${AZURE_FUNCTION_URL}?city=${encodeURIComponent(city)}`
+    }
+    
+    console.log('Full URL:', url)
+    
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    setWeather(data)
+    
+  } catch (err) {
+    setError('Failed to fetch weather data: ' + err.message)
+    console.error('Fetch error:', err)
+  } finally {
+    setLoading(false)
+  }
+}
 
 
   const handleKeyPress = (e) => {
