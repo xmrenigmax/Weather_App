@@ -1,135 +1,85 @@
-import { useState } from 'react'
-import './App.css'
+import { useWeather } from './hooks/useWeather';
+import Header from './components/Header/Header';
+import SearchBox from './components/SearchBox/SearchBox';
+import WeatherCard from './components/WeatherCard/WeatherCard';
+import Loading from './components/Loading/Loading';
+import Error from './components/Error/Error';
+import TechStack from './components/TechStack/TechStack';
+import './App.css';
 
 function App() {
-  const [city, setCity] = useState('')
-  const [weather, setWeather] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const {
+    city,
+    setCity,
+    weather,
+    loading,
+    error,
+    searchHistory,
+    getWeather,
+    clearWeather
+  } = useWeather();
 
-  // ✅ Correct way to access Vite environment variables
-  const AZURE_FUNCTION_URL = import.meta.env.VITE_AZURE_FUNCTION_URL
+  const handleHistoryClick = (historyCity) => {
+    setCity(historyCity);
+    getWeather(historyCity);
+  };
 
-  const getWeather = async () => {
-  if (!city.trim()) {
-    setError('Please enter a city name')
-    return
-  }
-
-  console.log('Function URL:', AZURE_FUNCTION_URL)
-  console.log('Searching for city:', city)
-
-  setLoading(true)
-  setError('')
-  setWeather(null)
-
-  try {
-    // ✅ FIX: Make sure we're building the URL correctly
-    // If AZURE_FUNCTION_URL already has ?code=, then use &city=
-    // If not, use ?city=
-    let url;
-    if (AZURE_FUNCTION_URL.includes('?')) {
-      url = `${AZURE_FUNCTION_URL}&city=${encodeURIComponent(city)}`
-    } else {
-      url = `${AZURE_FUNCTION_URL}?city=${encodeURIComponent(city)}`
+  const handleRetry = () => {
+    if (city.trim()) {
+      getWeather();
     }
-    
-    console.log('Full URL:', url)
-    
-    const response = await fetch(url)
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    setWeather(data)
-    
-  } catch (err) {
-    setError('Failed to fetch weather data: ' + err.message)
-    console.error('Fetch error:', err)
-  } finally {
-    setLoading(false)
-  }
-}
-
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      getWeather()
-    }
-  }
+  };
 
   return (
     <div className="app">
-      <div className="container">
-        <h1>🌤️ Azure Weather App</h1>
-        <p className="subtitle">Powered by Azure Functions & React</p>
-        
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Enter city name (e.g., London, Tokyo, New York)"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="city-input"
+      <Header />
+      
+      <main className="main-content">
+        <div className="container">
+          <SearchBox
+            city={city}
+            setCity={setCity}
+            loading={loading}
+            getWeather={getWeather}
+            searchHistory={searchHistory}
+            onHistoryClick={handleHistoryClick}
           />
-          <button 
-            onClick={getWeather} 
-            disabled={loading}
-            className="search-btn"
-          >
-            {loading ? 'Loading...' : 'Get Weather'}
-          </button>
-        </div>
 
-        {error && (
-          <div className="error">
-            ❌ {error}
-          </div>
-        )}
+          {loading && <Loading />}
 
-        {weather && (
-          <div className="weather-card">
-            <h2>{weather.city}, {weather.country}</h2>
-            <div className="weather-grid">
-              <div className="weather-item">
-                <span className="label">Temperature</span>
-                <span className="value">{weather.temperature}°C</span>
-              </div>
-              <div className="weather-item">
-                <span className="label">Feels Like</span>
-                <span className="value">{weather.feelsLike}°C</span>
-              </div>
-              <div className="weather-item">
-                <span className="label">Conditions</span>
-                <span className="value">{weather.description}</span>
-              </div>
-              <div className="weather-item">
-                <span className="label">Humidity</span>
-                <span className="value">{weather.humidity}%</span>
-              </div>
-              <div className="weather-item">
-                <span className="label">Wind Speed</span>
-                <span className="value">{weather.windSpeed} m/s</span>
+          {error && (
+            <Error 
+              message={error} 
+              onRetry={handleRetry}
+            />
+          )}
+
+          {weather && !loading && (
+            <WeatherCard 
+              weather={weather} 
+              onClear={clearWeather}
+            />
+          )}
+
+          {!weather && !loading && !error && (
+            <div className="welcome-message">
+              <div className="welcome-icon">🌍</div>
+              <h2>Welcome to SkyCast!</h2>
+              <p>Enter a city name above to get current weather information</p>
+              <div className="feature-list">
+                <div className="feature">Real-time weather data</div>
+                <div className="feature">Beautiful animations</div>
+                <div className="feature">Search history</div>
+                <div className="feature">Responsive design</div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="tech-stack">
-          <h3>🛠️ Tech Stack</h3>
-          <ul>
-            <li>Frontend: React + Vite</li>
-            <li>Backend: Azure Functions</li>
-            <li>API: OpenWeatherMap</li>
-            <li>Hosting: Azure Cloud</li>
-          </ul>
+          <TechStack />
         </div>
-      </div>
+      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
